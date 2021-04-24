@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 import json
+import pandas as pd
 
 def create_data_frame(date, symbol):
     ''' 指定された時刻の指定されたシンボルの価格をデータフレームで返す
@@ -20,6 +21,39 @@ def create_data_frame_all(date):
         times.append(v.times)
         prices.append(v.prices)
 
+    return pd.DataFrame({
+        'symbol': symbols,
+        'time': times,
+        'price': prices,
+    })
+
+def create_data_frame_all_span(start_date, end_date):
+    ''' 指定された日付の範囲のすべてのシンボルの価格をデータフレームで返す
+    '''
+    merged_symbol_data = {}
+    i_date = start_date
+    while i_date <= end_date:
+        for k, v in read_symbols_prices(i_date).items():
+            symbol_data = None
+            if (k in merged_symbol_data):
+                symbol_data = merged_symbol_data[k]
+            else:
+                # 必要なデータを格納するオブジェクトを作成
+                symbol_data = type("SymbolData", (object,), {
+                    'name': k,
+                    'times': [],
+                    'prices': []
+                })
+                merged_symbol_data[k] = symbol_data
+            symbol_data.times.append(v.times)
+            symbol_data.prices.append(v.prices)
+        i_date = i_date + timedelta(days=1)
+
+    symbols = times = prices = []
+    for k, v in merged_symbol_data.items():
+        symbols.append(k)
+        times.append(v.times)
+        prices.append(v.prices)
     return pd.DataFrame({
         'symbol': symbols,
         'time': times,
@@ -55,6 +89,7 @@ def read_symbols_prices(date):
                     else:
                         # 必要なデータを格納するオブジェクトを作成
                         symbol_data = type("SymbolData", (object,), {
+                            'name': data['symbol'],
                             'times': [],
                             'prices': []
                         })
@@ -73,6 +108,9 @@ if __name__ == "__main__":
     ''' テスト
     '''
     tdatetime = datetime(year=2021, month=4, day=10)
+    spd = create_data_frame_all_span(datetime(year=2021, month=4, day=10), datetime(year=2021, month=4, day=11))
+    print (spd)
+    spd.to_csv('alldata.csv')
     #print (create_data_frame_all(tdatetime))
     #print (read_symbols_prices(tdatetime))
     # CSV 出力
