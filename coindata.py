@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 import json
 import pandas as pd
+import pickle
 
 def create_data_frame(date, symbol):
     ''' 指定された時刻の指定されたシンボルの価格をデータフレームで返す
@@ -12,14 +13,33 @@ def create_data_frame(date, symbol):
         'price': all_symbol_data[symbol].prices,
     })
 
+def create_data_frame_span(start_date, end_date, symbol):
+    ''' 指定された時刻の指定されたシンボルの価格をデータフレームで返す
+    '''
+    i_date = start_date
+    times = []
+    prices = []
+    while i_date <= end_date:
+        all_symbol_data = read_symbols_prices(i_date)
+        times.extend(all_symbol_data[symbol].times)
+        prices.extend(all_symbol_data[symbol].prices)
+        i_date = i_date + timedelta(days=1)
+    return pd.DataFrame({
+        'symbol': symbol,
+        'time': times,
+        'price': prices,
+    })
+
 def create_data_frame_all(date):
     ''' 指定された時刻の指定されたシンボルの価格をデータフレームで返す
     '''
-    symbols = times = prices = []
+    symbols = []
+    times = []
+    prices = []
     for k, v in read_symbols_prices(date).items():
-        symbols.append(k)
-        times.append(v.times)
-        prices.append(v.prices)
+        symbols.extend(k)
+        times.extend(v.times)
+        prices.extend(v.prices)
 
     return pd.DataFrame({
         'symbol': symbols,
@@ -45,20 +65,20 @@ def create_data_frame_all_span(start_date, end_date):
                     'prices': []
                 })
                 merged_symbol_data[k] = symbol_data
-            symbol_data.times.append(v.times)
-            symbol_data.prices.append(v.prices)
+            symbol_data.times.extend(v.times)
+            symbol_data.prices.extend(v.prices)
         i_date = i_date + timedelta(days=1)
 
-    symbols = times = prices = []
+    dfs = []
     for k, v in merged_symbol_data.items():
-        symbols.append(k)
-        times.append(v.times)
-        prices.append(v.prices)
-    return pd.DataFrame({
-        'symbol': symbols,
-        'time': times,
-        'price': prices,
-    })
+        dfs.append(
+            pd.DataFrame({
+                'symbol': k,
+                'time': v.times,
+                'price': v.prices,
+            })
+        )
+    return dfs
 
 def get_prices_file_name(date, hour):
     ''' ファイル名を作成する
@@ -104,16 +124,35 @@ def read_symbols_prices(date):
     # 作成した辞書を返す
     return all_symbol_data
 
+def ut_dump_file(filename, data):
+    ''' データダンプユーティリティ
+    '''
+    with open(filename,'wb') as f:
+        pickle.dump(data, f)
+
+def ut_load_file(filename):
+    ''' データロードユーティリティ
+    '''
+    with open(filename, 'rb') as f:
+        return pickle.load(f)
+
 if __name__ == "__main__":
     ''' テスト
     '''
     tdatetime = datetime(year=2021, month=4, day=10)
-    spd = create_data_frame_all_span(datetime(year=2021, month=4, day=10), datetime(year=2021, month=4, day=11))
-    print (spd)
-    spd.to_csv('alldata.csv')
+    #spd = create_data_frame_all_span(tdatetime, datetime(year=2021, month=4, day=10))
+    #print (spd[0])
+    #ut_dump_file('tmp.bin', spd[0])
+    #spd.to_csv('alldata.csv')
     #print (create_data_frame_all(tdatetime))
     #print (read_symbols_prices(tdatetime))
     # CSV 出力
-    #symbol_name = 'BNBUSDT'
+    symbol_name = 'BNBUSDT'
     #df = create_data_frame(tdatetime, symbol_name)
-    #df.to_csv(tdatetime.strftime('%Y-%m-%d') + '_' + symbol_name + '.csv')
+    #print (df)
+    df = create_data_frame_span(tdatetime, datetime(year=2021, month=4, day=15), symbol_name)
+    df.to_csv(tdatetime.strftime('%Y-%m-%d') + '_' + symbol_name + '.csv')
+    print (df)
+
+    #df = pd.read_csv(tdatetime.strftime('%Y-%m-%d') + '_' + symbol_name + '.csv')
+    #print (df)
