@@ -36,7 +36,7 @@ def create_dataset(df, prediction_length):
     # 価格データを整形する
     stock_dataset = df.pivot(index='symbol', columns='time', values='price')
     # データの開始時間を銘柄数分作成
-    dates = [pd.Timestamp(START_DATE.strftime('%Y-%m-%d'), freq='T') for _ in range(stock_dataset.shape[0])]
+    dates = [pd.Timestamp(START_DATE.strftime('%Y-%m-%d'), freq='1min') for _ in range(stock_dataset.shape[0])]
     # 学習は総データ数の半分を除いたデータ
     train_target_values = [ts[:-prediction_length] for ts in stock_dataset.values]
     # テストは全て含まれたデータ
@@ -50,7 +50,7 @@ def create_dataset(df, prediction_length):
             FieldName.ITEM_ID: code,
         }
         for (target, start, code) in zip(train_target_values, dates, stock_dataset.index)
-    ], freq="T")
+    ], freq='1min')
 
     # テスト ListDataset を作成
     test_ds = ListDataset([
@@ -60,7 +60,7 @@ def create_dataset(df, prediction_length):
             FieldName.ITEM_ID: code,
         }
         for (target, start, code) in zip(test_target_values, dates, stock_dataset.index)
-    ], freq="T")
+    ], freq='1min')
 
     return train_ds, test_ds
 
@@ -74,7 +74,7 @@ def training(train_ds, prediction_length):
     else:
         # 学習の開始
         estimator = DeepAREstimator(
-            freq='T', # 必須
+            freq='1min', # 必須
             prediction_length=prediction_length, # 必須
             trainer = Trainer(batch_size=32,
                             clip_gradient=10.0,
@@ -128,7 +128,7 @@ def evaluating(test_ds, predictor, num_samples):
 
 def plot_prob_forecasts(ts_entry, forecast_entry, path, prediction_length, inline=True):
     # プロットの長さ
-    plot_length = 60 * 4
+    plot_length = 60 * 5
     # サンプリングの 50% が含まれる区間、サンプリングの 90% が含まれる区間
     prediction_intervals = (50, 90)
     legend = ["実価格", "予測価格中央値"] + [f"{k}% 予測区間" for k in prediction_intervals][::-1]
@@ -139,7 +139,6 @@ def plot_prob_forecasts(ts_entry, forecast_entry, path, prediction_length, inlin
     ax.axvline(ts_entry.index[-prediction_length], color='r')
     plt.legend(legend, loc="upper left")
     plt.title(forecast_entry.item_id)
-    print (1)
     if inline:
         plt.show()
         plt.clf()
@@ -166,7 +165,7 @@ train_ds, test_ds = create_dataset(df, PREDICTION_LENGTH)
 # 学習を開始
 predictor = training(train_ds, PREDICTION_LENGTH)
 # 評価を実行
-tss, forecasts, (agg_metrics, item_metrics) = evaluating(test_ds, predictor, 200)
+tss, forecasts, (agg_metrics, item_metrics) = evaluating(test_ds, predictor, 100)
 
 # 結果をダンプしてみる
 #print(json.dumps(agg_metrics, indent=4))
@@ -174,7 +173,7 @@ tss, forecasts, (agg_metrics, item_metrics) = evaluating(test_ds, predictor, 200
 #print(item_metrics.head())
 
 # 結果の可視化
-for i in tqdm(range(2)):
+for i in tqdm(range(len(SYMBOLS))):
     ts_entry = tss[i]
     forecast_entry = forecasts[i]
     plot_prob_forecasts(ts_entry, forecast_entry, './plots/', PREDICTION_LENGTH, inline=True)
