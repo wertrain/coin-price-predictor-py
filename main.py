@@ -73,7 +73,7 @@ def training(train_ds, prediction_length):
             return pickle.load(f)
     else:
         # 学習の開始
-        estimator = DeepAREstimator(
+        estimator = gluonts.model.deepar.DeepAREstimator(
             freq='1min', # 必須
             prediction_length=prediction_length, # 必須
             trainer = Trainer(batch_size=32,
@@ -110,25 +110,27 @@ def training(train_ds, prediction_length):
         return predictor
 
 def evaluating(test_ds, predictor, num_samples):
-    '''評価を実行する
+    ''' 評価を実行する
     '''
     # 学習結果から推論を実行する
-    forecast_it, ts_it = make_evaluation_predictions(
+    forecast_it, ts_it = gluonts.evaluation.backtest.make_evaluation_predictions(
         dataset=test_ds,
         predictor=predictor,
         num_samples=num_samples
     )
     # 時系列条件付け値の取得
-    tss = list(tqdm(ts_it, total=len(test_ds)))
+    tss = list(ts_it)
     # 時系列予測の取得
-    forecasts = list(tqdm(forecast_it, total=len(test_ds)))
+    forecasts = list(forecast_it)
     # 評価を実行する
     evaluator = gluonts.evaluation.Evaluator(quantiles=[0.5])
     return tss, forecasts, evaluator(iter(tss), iter(forecasts), num_series=len(test_ds))
 
 def plot_prob_forecasts(ts_entry, forecast_entry, path, prediction_length, inline=True):
+    ''' 評価の可視化を行う
+    '''
     # プロットの長さ
-    plot_length = 60 * 5
+    plot_length = 60 * 24
     # サンプリングの 50% が含まれる区間、サンプリングの 90% が含まれる区間
     prediction_intervals = (50, 90)
     legend = ["実価格", "予測価格中央値"] + [f"{k}% 予測区間" for k in prediction_intervals][::-1]
@@ -154,7 +156,7 @@ def plot_prob_forecasts(ts_entry, forecast_entry, path, prediction_length, inlin
 SYMBOLS = ['BNBUSDT', "DOGEUSDT"]
 # 学習データの開始期間・終了期間
 START_DATE = datetime(year=2021, month=4, day=10)
-END_DATE = datetime(year=2021, month=4, day=11)
+END_DATE = datetime(year=2021, month=4, day=10)
 # 予測期間（分）
 PREDICTION_LENGTH = 120
 
@@ -176,4 +178,4 @@ tss, forecasts, (agg_metrics, item_metrics) = evaluating(test_ds, predictor, 100
 for i in tqdm(range(len(SYMBOLS))):
     ts_entry = tss[i]
     forecast_entry = forecasts[i]
-    plot_prob_forecasts(ts_entry, forecast_entry, './plots/', PREDICTION_LENGTH, inline=True)
+    plot_prob_forecasts(ts_entry, forecast_entry, './plots/', PREDICTION_LENGTH, inline=False)
