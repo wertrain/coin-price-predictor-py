@@ -119,9 +119,9 @@ def evaluating(test_ds, predictor, num_samples):
         num_samples=num_samples
     )
     # 時系列条件付け値の取得
-    tss = list(ts_it)
+    tss = list(tqdm(ts_it, total=len(test_ds)))
     # 時系列予測の取得
-    forecasts = list(forecast_it)
+    forecasts = list(tqdm(forecast_it, total=len(test_ds)))
     # 評価を実行する
     evaluator = gluonts.evaluation.Evaluator(quantiles=[0.5])
     return tss, forecasts, evaluator(iter(tss), iter(forecasts), num_series=len(test_ds))
