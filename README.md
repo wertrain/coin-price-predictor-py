@@ -12,4 +12,4 @@ venv create and activate
 
 ## Example
 
-![DOGE-USDT](https://raw.githubusercontent.com/wertrain/coin-price-predictor-py/main/plots/20210410_BNBUSDT.png "DOGE-USDT")
+![BNB-USDT](https://raw.githubusercontent.com/wertrain/coin-price-predictor-py/main/plots/20210410_BNBUSDT.png "BNB-USDT")
