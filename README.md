@@ -6,7 +6,7 @@ install requirements
 
     pip install -r requirements.txt
 
-venv create and activate
+venv create (or activate)
 
     venv_create_or_activate.bat
 
